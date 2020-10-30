@@ -1,0 +1,127 @@
+---
+title: "US Birth Data"
+author: "Sondre Løvås"
+output: html_document
+---
+
+<!-- Data is loaded by the 'loadData' chunck. The code used to create the data has been set to not execute. 
+To fully execute instead, set 'loadData' chunck eval and include to false and to true in data, extractData, 
+sexProportion, averageWeight and sexProportionByDay chuncks. The 2017, 2018 and 2019 data must also be downloaded
+and placed in the data folder.-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(readr)
+library(stringr)
+library(lubridate)
+library(zoo)
+library(dplyr)
+```
+
+```{r data, eval=FALSE, include=FALSE}
+d2017 = "data/Nat2017PublicUS.c20180516.r20180808.txt"
+d2018 = "data/Nat2018PublicUS.c20190509.r20190717.txt"
+d2019 = "data/Nat2019PublicUS.c20200506.r20200915.txt"
+```
+
+```{r loadData, eval=TRUE, include=TRUE}
+load("data/dfSexProportion.RData")
+load("data/dfAverageWeigth.RData")
+load("data/dfSexProportionByDay.RData")
+```
+
+<!-- Extract year, month, day, sex and weight from the birth data. -->
+<!-- Attributes location, year:9-12, month:13-14, day:23, sex:475, weight:504-507. -->
+```{r extractData, eval=FALSE, include=FALSE}
+extractData <- function(file) {
+  data <- read_fwf(file,
+                   fwf_positions(
+                     c(9,13,23,475,504),
+                     c(12,14,23,475,507),
+                     c("Year", "Month", "Day", "Sex", "Weight")
+                   )) %>%
+          mutate(Date=make_date(Year, Month))
+  return(data)
+}
+
+data2017 <- extractData(d2017)
+data2018 <- extractData(d2018)
+data2019 <- extractData(d2019)
+
+df <- rbind(data2017, data2018, data2019)
+
+```
+
+<!-- Find the proportion of boys to girls. -->
+```{r sexProportion, eval=FALSE, include=FALSE}
+dfSexProportion <- as.data.frame(table(df$Date, df$Sex)) %>% 
+  rename(., Date=Var1, Sex=Var2)
+```
+
+<!-- Find average weight. -->
+```{r averageWeight, eval=FALSE, include=FALSE}
+dfAverageWeight <- df
+dfAverageWeight$Weight[dfAverageWeight$Weight == 9999] <- NA
+dfAverageWeight$Weight <- as.numeric(as.character(df$Weight))
+dfAverageWeight <- dfAverageWeight %>%
+  group_by(Date, Sex) %>%
+  summarise(AveWeigth=mean(Weight, na.rm = TRUE))
+```
+
+<!-- Find proportion of boys to girls by day of birth. -->
+```{r sexProportionByDay, eval=FALSE, include=FALSE}
+dfSexProportionByDay <- as.data.frame(table(df$Date, df$Sex, df$Day)) %>%
+  rename(., Date=Var1, Sex=Var2, Day=Var3)
+dfSexProportionByDay$Day <- recode(dfSexProportionByDay$Day,
+                                   "1"="Sun", "2"="Mon",
+                                   "3"="Tue", "4"="Wed",
+                                   "5"="Thur", "6"="Fri",
+                                   "7"="Sat")
+```
+
+
+In this report, US birth data such as frequency of boys to girls born and their average weights are visualized. 
+The data is found at "https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm".
+The data used are from the years 2017, 2018 and 2019.
+
+
+<!-- Plot proportion of boys to girls -->
+```{r plotSexProportion, message=FALSE, warning=FALSE, fig.width=15, fig.height=5}
+ggplot(dfSexProportion,
+       aes(x=month(Date), y=Freq, color=Sex, group=Sex)) + 
+       geom_line() + 
+       labs(x="Month", y="Frequency", color="Sex", title = "Frequency of boys and girls born by month in the years 2017, 2018 and 2019.") +
+       scale_x_continuous(breaks = 1:12) +
+       facet_wrap(~year(Date))
+```
+
+This plot shows how many boys and girls are born per month. Every year seems to have a big spike in August. 
+
+<!-- Plot average weight -->
+```{r plotAverageWeigth, message=FALSE, warning=FALSE, fig.width=15, fig.height=5}
+ggplot(dfAverageWeight,
+       aes(x=month(Date), y=AveWeigth, color=Sex, group=Sex)) + 
+       geom_line() + 
+       labs(x="Month", y="Weigth in grams", color="Sex", title = "Average birth weigth for boys and grils by month in the years 2017, 2018 and 2019.") +
+       scale_x_continuous(breaks = 1:12) +
+       facet_wrap(~year(Date))
+
+```
+
+Here it can be seen that boys weigh roughly 3350 grams and girls weigh 3225 grams on average when they are born. 
+
+
+<!-- Plot proportion of boys to girls by day -->
+```{r plotSexProportionByDay, message=FALSE, warning=FALSE, fig.width=16, fig.height=15}
+ggplot(dfSexProportionByDay,
+       aes(x=Day, y=Freq, color=Sex, group=Sex)) + 
+       geom_line() + 
+       labs(x="Day", y="Frequency", color="Sex", title = "Proportion of boys to girls by day in each month of the years 2017, 2018 and 2019") +
+       facet_wrap(year(Date)~month(Date))
+```
+This plot shows how many boys and girls are born on average each day of every month in 2017, 2018 and 2019.
+
+
+
+
