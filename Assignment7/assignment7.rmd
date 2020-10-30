@@ -6,7 +6,8 @@ output: html_document
 
 <!-- Data is loaded by the 'loadData' chunck. The code used to create the data has been set to not execute. 
 To fully execute instead, set 'loadData' chunck eval and include to false and to true in data, extractData, 
-sexProportion, averageWeight and sexProportionByDay chuncks.-->
+sexProportion, averageWeight and sexProportionByDay chuncks. The 2017, 2018 and 2019 data must also be downloaded
+and placed in the data folder.-->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -25,7 +26,6 @@ d2019 = "data/Nat2019PublicUS.c20200506.r20200915.txt"
 ```
 
 ```{r loadData, eval=TRUE, include=TRUE}
-load("data/df.RData")
 load("data/dfSexProportion.RData")
 load("data/dfAverageWeigth.RData")
 load("data/dfSexProportionByDay.RData")
